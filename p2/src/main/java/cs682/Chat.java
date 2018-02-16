@@ -25,15 +25,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @Author Yifan Zhou
  */
 public class Chat {
-    public static String PORT = "5610";
+    public static String PORT = "8000";
     public static String UDPPORT = "5700";
     static volatile boolean isShutdown = false;
 
-    public static final int ZpPORT = 2181;
-    public static final String ZpHOST = "mc01";
+    public static final int ZpPORT = 7000;
+    public static final String ZpHOST = "localhost";
 
     public static final String group = "/CS682_Chat";
-    public static String member = "/yifanzhou";
+    public static String member = "/yifanZhou";
     public static String user = "yifanzhou";
 
     public static String format = "yyyy-MM-dd HH:mm:ss";
@@ -58,16 +58,16 @@ public class Chat {
         for (int i = 0; i < args.length; i++) {
             System.out.println(args[i]);
         }
-        if (args[0].equals("-user")) {
-            user = args[1];
-            member = "/" + user;
-            //System.out.println(member);
-        }
-        if (args[2].equals("-port"))
-            PORT = args[3];
-
-        if (args[4].equals("-udpport"))
-            UDPPORT = args[5];
+//        if (args[0].equals("-user")) {
+//            user = args[1];
+//            member = "/" + user;
+//            //System.out.println(member);
+//        }
+//        if (args[2].equals("-port"))
+//            PORT = args[3];
+//
+//        if (args[4].equals("-udpport"))
+//            UDPPORT = args[5];
 
 
         client.beginChat();
@@ -82,12 +82,9 @@ public class Chat {
         ZooKeeperConnector zkc= new ZooKeeperConnector();
         zkc.joinZooKeeper();
         hm = new HistoryManager(threads,zkc);
-        ui = new UI(threads,zkc);
-        rm = new ReceiveMessage(threads,zkc,hm);
+        threads.submit(new HistoryReceiver(threads,hm));
+        threads.submit(new UI(threads,zkc)); //Create UI thread
+        threads.submit(new ReceiveMessage(threads,zkc,hm));
 
     }
-
-
-
-
 }

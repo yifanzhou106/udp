@@ -63,12 +63,12 @@ public class ZooKeeperConnector {
      * @return
      */
     public void joinZooKeeper() {
-        ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp("mc10").setPort(PORT).setUdpport(UDPPORT).build();
+        ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp("127.0.0.1").setPort(PORT).setUdpport(UDPPORT).build();
         try {
             String createdPath = zk.create(group + member,
                     data.toByteArray(),  //probably should be something more interesting here...
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.PERSISTENT);//_SEQUENTIAL
+                    CreateMode.EPHEMERAL );//_SEQUENTIAL
             System.out.println("Joined group " + group + member);
 
         } catch (KeeperException ke) {
