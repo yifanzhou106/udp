@@ -42,18 +42,18 @@ public class HistoryReceiver implements Runnable {
                     ChatProto1.Data.packetType type = protoPkt.getType();
                     int udpPort = packet.getPort();
                     String udpIp = packet.getAddress().toString();
-                    if (type == ChatProto1.Data.packetType.REQUEST) {
+                    if (type == ChatProto1.Data.packetType.REQUEST) {   //Handle REQUEST
                         if (!historyHandler.containsKey(udpIp + udpPort)) {
-                            HistorySender hs = new HistorySender(packet);
+                            HistorySender hs = new HistorySender(packet,hm.getHistoryPacket());
                             historyHandler.put(udpIp + udpPort, hs);
                             threads.submit(hs);
                         } else {
                             System.out.println("Your Services are running.\n ");
                         }
                     } else {
-                        if (historyHandler.containsKey(udpIp + udpPort)) {
-                            HistorySender hs = historyHandler.get(udpIp + udpPort);
-                            hs.setPacket(packet);
+                        if (historyHandler.containsKey(udpIp + udpPort)) {  //Handle ACK and DATA
+                            HistorySender hs = historyHandler.get(udpIp + udpPort); //Get thread from hash map
+                            hs.setPacket(packet); //Pass packet into HistorySender
                         }
                     }
                 } catch (IOException e) {

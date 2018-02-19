@@ -38,7 +38,11 @@ public class HistoryManager {
         history.add(receiveMessage);
     }
 
+public History getHistoryPacket()
+{
+    History packet = History.newBuilder().addAllHistory(history).build();
 
-
+    return packet;
+}
 
 }
