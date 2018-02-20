@@ -44,6 +44,7 @@ public class Chat {
     static Map<String, ArrayList<String>> userMap = new HashMap();
     static Map<String, String> bcastHistoryMap = new TreeMap<>();
     private HistoryManager hm;
+    private HistoryReceiver hr;
     private UI ui;
     private ReceiveMessage rm;
 
@@ -79,12 +80,15 @@ public class Chat {
      * Code from 601
      */
     public void beginChat() {
-        ZooKeeperConnector zkc= new ZooKeeperConnector();
+        ZooKeeperConnector zkc = new ZooKeeperConnector();
         zkc.joinZooKeeper();
-        hm = new HistoryManager(threads,zkc);
-        threads.submit(new HistoryReceiver(threads,hm));
-        threads.submit(new UI(threads,zkc)); //Create UI thread
-        threads.submit(new ReceiveMessage(threads,zkc,hm));
+        hm = new HistoryManager(threads, zkc);
+        hr = new HistoryReceiver(threads, hm);
+        ui = new UI(threads, zkc, hr,hm);
+        rm = new ReceiveMessage(threads, zkc, hm);
+        threads.submit(hr);
+        threads.submit(ui); //Create UI thread
+        threads.submit(rm);
 
     }
 }

@@ -16,6 +16,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import static cs682.Chat.UDPPORT;
@@ -23,13 +24,13 @@ import static cs682.Chat.isShutdown;
 
 public class HistoryManager {
 
-    private ArrayList<ChatProto> history;
+    private List<ChatProto> history;
     public ZooKeeperConnector zkc;
+
 
 
     public HistoryManager(ExecutorService threads, ZooKeeperConnector zkc) {
         history = new ArrayList<>();
-
         this.zkc = zkc;
 
     }
@@ -38,11 +39,31 @@ public class HistoryManager {
         history.add(receiveMessage);
     }
 
-public History getHistoryPacket()
-{
-    History packet = History.newBuilder().addAllHistory(history).build();
+    public History getHistoryPacket() {
+        History packet = History.newBuilder().addAllHistory(history).build();
 
-    return packet;
-}
+        return packet;
+    }
+
+    public void setHistoryByteArray(byte[] historyByteArray) {
+
+        try {
+            ByteArrayInputStream instream = new ByteArrayInputStream(historyByteArray);
+            History packet = History.parseDelimitedFrom(instream);
+            history= packet.getHistoryList();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+    public void printList (){
+        for (ChatProto item:history)
+        {
+            System.out.println("From"+item.getFrom()+": "+ item.getMessage()+"\n");
+        }
+
+    }
+
 
 }

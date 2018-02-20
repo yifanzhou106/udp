@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.concurrent.ExecutorService;
 
 import static cs682.Chat.*;
+import cs682.ChatProto1.*;
 
 public class ReceiveMessage implements Runnable {
 
@@ -32,7 +33,7 @@ public class ReceiveMessage implements Runnable {
             while (!isShutdown) {
                 Socket connectionSocket = welcomingSocket.accept();
                 InputStream instream = connectionSocket.getInputStream();
-                ChatProto1.ChatProto receiveMessage = ChatProto1.ChatProto.getDefaultInstance();
+                ChatProto receiveMessage = ChatProto.getDefaultInstance();
                 receiveMessage = receiveMessage.parseDelimitedFrom(instream);
                 String singleMessage = receiveMessage.getFrom() + " says: " + receiveMessage.getMessage();
                 String bcastMessage = receiveMessage.getFrom() + " broadcast: " + receiveMessage.getMessage();
@@ -52,7 +53,7 @@ public class ReceiveMessage implements Runnable {
 
                 System.out.println("Response date: " + date);
                 System.out.println("\n###################\n");
-                ChatProto1.Reply responseMessage = ChatProto1.Reply.newBuilder().setStatus(200).setMessage("Ok").build();
+                Reply responseMessage = Reply.newBuilder().setStatus(200).setMessage("Ok").build();
                 OutputStream outstream = connectionSocket.getOutputStream();
                 responseMessage.writeDelimitedTo(outstream);
 

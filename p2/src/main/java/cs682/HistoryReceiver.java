@@ -1,15 +1,18 @@
 package cs682;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 
-import static cs682.Chat.UDPPORT;
-import static cs682.Chat.isShutdown;
+import static cs682.Chat.*;
+import cs682.ChatProto1.*;
+import cs682.ChatProto1.Data.packetType;
 
 public class HistoryReceiver implements Runnable {
     private HashMap<String, HistorySender> historyHandler;
@@ -21,6 +24,24 @@ public class HistoryReceiver implements Runnable {
         this.hm = hm;
         historyHandler = new HashMap<>();
 
+    }
+
+    public void sendRequest(String udpIp, String udpPort) {
+        try {
+            InetAddress ip = InetAddress.getByName(udpIp);
+            int port = Integer.parseInt(udpPort);
+
+            DatagramSocket socket = new DatagramSocket(Integer.parseInt(UDPPORT));
+            ByteArrayOutputStream outstream = new ByteArrayOutputStream(1024);
+            Data request = Data.newBuilder().setType(Data.packetType.REQUEST).build();
+            request.writeDelimitedTo(outstream);
+            byte[] requestPacketByteArray = outstream.toByteArray();
+            DatagramPacket datagramPacket = new DatagramPacket(requestPacketByteArray, requestPacketByteArray.length, ip, port);
+            socket.send(datagramPacket);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -37,14 +58,14 @@ public class HistoryReceiver implements Runnable {
                     socket.receive(packet);
                     byte[] rcvdData = packet.getData();
                     ByteArrayInputStream instream = new ByteArrayInputStream(rcvdData);
-                    ChatProto1.Data protoPkt = ChatProto1.Data.parseDelimitedFrom(instream);
+                    Data protoPkt = Data.parseDelimitedFrom(instream);
 
-                    ChatProto1.Data.packetType type = protoPkt.getType();
+                    packetType type = protoPkt.getType();
                     int udpPort = packet.getPort();
                     String udpIp = packet.getAddress().toString();
-                    if (type == ChatProto1.Data.packetType.REQUEST) {   //Handle REQUEST
+                    if (type == packetType.REQUEST) {   //Handle REQUEST
                         if (!historyHandler.containsKey(udpIp + udpPort)) {
-                            HistorySender hs = new HistorySender(packet,hm.getHistoryPacket());
+                            HistorySender hs = new HistorySender(packet, hm);
                             historyHandler.put(udpIp + udpPort, hs);
                             threads.submit(hs);
                         } else {
@@ -54,6 +75,11 @@ public class HistoryReceiver implements Runnable {
                         if (historyHandler.containsKey(udpIp + udpPort)) {  //Handle ACK and DATA
                             HistorySender hs = historyHandler.get(udpIp + udpPort); //Get thread from hash map
                             hs.setPacket(packet); //Pass packet into HistorySender
+                        }
+                        else if (type== packetType.DATA){
+                            HistorySender hs = new HistorySender(packet, hm);
+                            historyHandler.put(udpIp + udpPort, hs);
+                            threads.submit(hs);
                         }
                     }
                 } catch (IOException e) {
