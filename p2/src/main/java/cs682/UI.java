@@ -77,23 +77,23 @@ public class UI implements Runnable {
 
                 case "history":
                     rwl.readLock().lock();
-                    if (bcastHistoryMap.isEmpty()) {
-                        System.out.println("\nBroadcast History is empty\n");
-                    } else
-//                            for (Map.Entry<String, String> map : bcastHistoryMap.entrySet()) {
-//                                System.out.println(map.getValue() + "  Date: " + map.getKey());
-//                            }
                     hm.printList();
-                        rwl.readLock().unlock();
+                    rwl.readLock().unlock();
                     break;
 
                 case "request":
                     System.out.println("Request history data from? ");
                     String name = reader.nextLine();
-                    userData = userMap.get(name);
-                    String sip = userData.get(0);
-                    String udpport = userData.get(2);
-                    hr.sendRequest(sip, udpport);
+                    if (userMap.containsKey(name)) {
+                        userData = userMap.get(name);
+                        String sip = userData.get(0);
+                        String udpport = userData.get(2);
+                        if (udpport==null)
+                            System.out.println("This person do not support UDP\n");
+                        hr.sendRequest(sip, udpport);
+                    } else {
+                        System.out.println("This person not in the list\n");
+                    }
                     break;
                 case "exit":
                     isShutdown = true;

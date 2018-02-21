@@ -63,7 +63,7 @@ public class ZooKeeperConnector {
      * @return
      */
     public void joinZooKeeper() {
-        ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp("127.0.0.1").setPort(PORT).setUdpport(UDPPORT).build();
+        ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp(HOST).setPort(PORT).setUdpport(UDPPORT).build();
         try {
             String createdPath = zk.create(group + member,
                     data.toByteArray(),  //probably should be something more interesting here...

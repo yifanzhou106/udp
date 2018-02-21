@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 
 import static cs682.Chat.UDPPORT;
 import static cs682.Chat.isShutdown;
+import static cs682.Chat.rwl;
 
 public class HistoryManager {
 
@@ -48,17 +49,32 @@ public class HistoryManager {
     public void setHistoryByteArray(byte[] historyByteArray) {
 
         try {
+            rwl.writeLock().lock();
             ByteArrayInputStream instream = new ByteArrayInputStream(historyByteArray);
             History packet = History.parseDelimitedFrom(instream);
-            history= packet.getHistoryList();
+        //    System.out.println(packet);
+           this.history= packet.getHistoryList();
+          //  System.out.println(history);
+            rwl.writeLock().unlock();
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
     }
+
+    public void setHistory(List<ChatProto> history) {
+        System.out.println("Update Array");
+        this.history = history;
+    }
+
     public void printList (){
-        for (ChatProto item:history)
+        if (history.isEmpty())
+        {
+            System.out.println("List is empty.\n");
+        }
+        else
+            for (ChatProto item:history)
         {
             System.out.println("From"+item.getFrom()+": "+ item.getMessage()+"\n");
         }
