@@ -1,5 +1,6 @@
 package cs682;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.sun.tools.jdi.Packet;
 import cs682.ChatProto1.ChatProto;
 import cs682.ChatProto1.Data;
@@ -19,9 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import static cs682.Chat.UDPPORT;
-import static cs682.Chat.isShutdown;
-import static cs682.Chat.rwl;
+import static cs682.Chat.*;
 
 public class HistoryManager {
 
@@ -57,24 +56,17 @@ public class HistoryManager {
             rwl.writeLock().lock();
             ByteArrayInputStream instream = new ByteArrayInputStream(historyByteArray);
             History packet = History.parseDelimitedFrom(instream);
-            //System.out.println(packet);
+            if (DEBUGMODE) System.out.println(packet);
             history = new ArrayList<>();
             for (int i=0;i<packet.getHistoryCount();i++)
                 history.add(packet.getHistory(i));
-            //System.out.println(packet.getHistoryList());
-           //this.history= packet.getHistoryList();
-          //  System.out.println(history);
             rwl.writeLock().unlock();
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
-    }
 
-    public void setHistory(List<ChatProto> history) {
-        System.out.println("Update Array");
-        this.history = history;
     }
 
     public void printList (){

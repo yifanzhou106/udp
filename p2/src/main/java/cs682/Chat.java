@@ -26,8 +26,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class Chat {
     public static String PORT = "8000";
-   // public static String HOST = "mc10";
+    // public static String HOST = "mc10";
     public static String UDPPORT = "5700";
+
+    public static Boolean DEBUGMODE = false;
+    public static Boolean NOACK = false;
+    public static Boolean NODATA = false;
+    public static Boolean NOREQUEST = false;
+
     static volatile boolean isShutdown = false;
 
     public static final int ZpPORT = 2181;//2181
@@ -71,6 +77,18 @@ public class Chat {
         if (args[4].equals("-udpport"))
             UDPPORT = args[5];
 
+        if (args.length > 6) {
+            if (args[6].equals("-debug"))
+                DEBUGMODE = true;
+            if (args.length > 7) {
+                if (args[7].equals("nodata"))
+                    NODATA = true;
+                if (args[7].equals("noack"))
+                    NOACK = true;
+                if (args[7].equals("norequest"))
+                    NOREQUEST = true;
+            }
+        }
 
         client.beginChat();
 
@@ -85,7 +103,7 @@ public class Chat {
         zkc.joinZooKeeper();
         hm = new HistoryManager(threads, zkc);
         hr = new HistoryReceiver(threads, hm);
-        ui = new UI(threads, zkc, hr,hm);
+        ui = new UI(threads, zkc, hr, hm);
         rm = new ReceiveMessage(threads, zkc, hm);
         threads.submit(hr);
         threads.submit(ui); //Create UI thread

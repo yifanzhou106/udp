@@ -22,7 +22,6 @@ public class HistoryReceiver implements Runnable {
     public ExecutorService threads;
     private HistoryManager hm;
     static DatagramSocket socket;
-    protected static Logger log = LogManager.getLogger(HistoryReceiver.class);
 
     public HistoryReceiver(ExecutorService threads, HistoryManager hm) {
         this.threads = threads;
@@ -45,8 +44,11 @@ public class HistoryReceiver implements Runnable {
             request.writeDelimitedTo(outstream);
             byte[] requestPacketByteArray = outstream.toByteArray();
             DatagramPacket datagramPacket = new DatagramPacket(requestPacketByteArray, requestPacketByteArray.length, ip, port);
-            socket.send(datagramPacket);
-            log.info("Sending a request packet\n");
+            if (!NOREQUEST)
+                socket.send(datagramPacket);
+            if (NOREQUEST)
+                System.out.println("No request Mode, no request will be send");
+            if (DEBUGMODE) System.out.println("Sending a request packet\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -67,30 +69,32 @@ public class HistoryReceiver implements Runnable {
                 packetType type = protoPkt.getType();
                 int udpPort = packet.getPort();
                 String udpIp = packet.getAddress().toString();
-                boolean isexist =historyHandler.containsKey(udpIp + udpPort);
+                rwl.readLock().lock();
+                boolean isexist = historyHandler.containsKey(udpIp + udpPort);
+                rwl.readLock().unlock();
                 if (type == packetType.REQUEST) {   //Handle REQUEST
-                    log.info("Receive a Request Packet.\n");
-                    rwl.readLock().lock();
+                    if (DEBUGMODE) System.out.println("Receive a Request Packet.\n");
 
-                        rwl.readLock().unlock();
                     if (!isexist) {
                         HistorySender hs = new HistorySender(packet, hm, historyHandler);
-                        log.info("Request Add into hashmap." + udpIp + udpPort);
+                        if (DEBUGMODE) System.out.println("Request Add into hashmap." + udpIp + udpPort);
                         rwl.writeLock().lock();
                         historyHandler.put(udpIp + udpPort, hs);
                         rwl.writeLock().unlock();
                         threads.submit(hs);
                     } else {
-                        log.info("Your Services are running.\n ");
+                        if (DEBUGMODE) System.out.println("Your Services are running.\n ");
+                        System.out.println("You are working with " + udpIp + " " + udpPort+ " Please wait");
                     }
                 } else {
                     if (isexist) {  //Handle ACK and DATA
-                        //threads.submit(new ReceivePacketHandler(historyHandler, packet));//Create threads to set packets
-                        HistorySender hs = historyHandler.get(udpIp + udpPort); //Get thread from hash map
-                       hs.setPacket(packet); //Pass packet into HistorySender
+                        threads.submit(new ReceivePacketHandler(historyHandler, packet));//Create threads to set packets
+//                        HistorySender hs = historyHandler.get(udpIp + udpPort); //Get thread from hash map
+//                       hs.setPacket(packet); //Pass packet into HistorySender
                     } else if (type == packetType.DATA) { //Create a new thread when receive a new DATA
                         HistorySender hs = new HistorySender(packet, hm, historyHandler);
-                        log.info("Data Add into hashmap." + udpIp + udpPort);
+                        System.out.println("Connected, let's loading");
+                        if (DEBUGMODE) System.out.println("Data Add into hashmap." + udpIp + udpPort);
                         rwl.writeLock().lock();
                         historyHandler.put(udpIp + udpPort, hs);
                         rwl.writeLock().unlock();

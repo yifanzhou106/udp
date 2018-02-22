@@ -4,6 +4,8 @@ import com.google.protobuf.ByteString;
 import cs682.ChatProto1.Data;
 import cs682.ChatProto1.Data.packetType;
 import cs682.ChatProto1.History;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -12,10 +14,11 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static cs682.Chat.rwl;
+import static cs682.Chat.*;
 import static cs682.HistoryReceiver.socket;
 
 public class HistorySender implements Runnable {
@@ -74,20 +77,20 @@ public class HistorySender implements Runnable {
 
             type = protoPkt.getType();
             if ((type == packetType.ACK) && (protoPkt.getSeqNo() == packetNoNoChange)) {
-                System.out.println("\nreceive ack packet " + protoPkt.getSeqNo());
+                if (DEBUGMODE) System.out.println("\nreceive ack packet " + protoPkt.getSeqNo()+"\n");
                 System.out.println("Sending data completed");
                 stopflag = true;
                 rwl.writeLock().lock();
                 historyHandler.remove(ip.toString() + udpport);
                 rwl.writeLock().unlock();
-                System.out.println("Remove user"+ip.toString() + udpport+ "successfully");
+                if (DEBUGMODE) System.out.println("Remove user" + ip.toString() + udpport + "successfully");
                 countdowntimer.countDown();
             } else if (type == packetType.ACK && (protoPkt.getSeqNo() > preSeq)) {
                 newSeq = protoPkt.getSeqNo();
                 packetNo = packetNoNoChange - newSeq;
                 countdowntimer.countDown();
-                System.out.println("\nreceive ack packet " + protoPkt.getSeqNo());
-               // System.out.println("\nrelease countdown ");
+                if (DEBUGMODE) System.out.println("\nreceive ack packet " + protoPkt.getSeqNo());
+                // System.out.println("\nrelease countdown ");
             }
 
         } catch (IOException e) {
@@ -111,13 +114,19 @@ public class HistorySender implements Runnable {
                 type = protoPkt.getType();
 
                 preSeq = newSeq; //Set Previous Seq
-
+                boolean timeoutflag;
                 if (type == packetType.REQUEST) {
-                    System.out.println("Total packet no is " + packetNoNoChange);
-                    System.out.println("Total len of ths packet is " + historyLen);
+                    if (DEBUGMODE) System.out.println("Total packet no is " + packetNoNoChange);
+                    if (DEBUGMODE) System.out.println("Total len of ths packet is " + historyLen);
                     do {
+                        if (NODATA) System.out.println("NO data mode. 50% chances data will be send, keep waiting");
                         createPackets(historyByteArray, 0, packetNo, seq, 4);
-                    } while (!countdowntimer.await(2000, TimeUnit.MILLISECONDS));
+                        timeoutflag = countdowntimer.await(2000, TimeUnit.MILLISECONDS);
+                        if (!timeoutflag)
+                        {
+                            if (DEBUGMODE) System.out.println("\nTime out!!!!!! Resending\n");
+                        }
+                    } while (!timeoutflag);
                     count = localcount;
                     seq = localseq;
 
@@ -126,34 +135,49 @@ public class HistorySender implements Runnable {
                     createPackets(historyByteArray, count, packetNo, seq, 4 - (seq - 1 - newSeq)); //shift the window and send some packets then wait
                     countdowntimer = new CountDownLatch(1);
 
-                    while (!countdowntimer.await(2000, TimeUnit.MILLISECONDS)) {
+                    timeoutflag = countdowntimer.await(2000, TimeUnit.MILLISECONDS);
+                    if (!timeoutflag)
+                    {
+                        if (DEBUGMODE) System.out.println("\nTime out!!!!!! Resending\n");
+                    }
+                    while (!timeoutflag) {
                         createPackets(historyByteArray, 10 * newSeq, packetNo, newSeq + 1, 4);//send all 4 packets in this window again and again
-                        System.out.println("\nSet countdown timer");
+                        //System.out.println("\nSet countdown timer");
                         countdowntimer = new CountDownLatch(1);
+
+                        timeoutflag = countdowntimer.await(2000, TimeUnit.MILLISECONDS);
+                        if (!timeoutflag)
+                        {
+                            if (DEBUGMODE)   System.out.println("\nTime out!!!!!! Resending\n");
+                        }
                     }
                     count = localcount;
                     seq = localseq;
 
                 } else if (type == packetType.DATA) {
                     if (protoPkt.getSeqNo() == seq) {
-                        System.out.println("\nReceive packet " + seq);
+                        if (DEBUGMODE) System.out.println("\nReceive packet " + seq);
                         isLast = protoPkt.getIsLast();
                         byte[] dataPacket = protoPkt.getData().toByteArray();
                         outputStream.write(dataPacket);
 
                         Data ack = Data.newBuilder().setType(packetType.ACK).setSeqNo(seq).build();
-                        sendPacket(ack);
-                        System.out.println("\nSend ack " + seq + " to " + ip + udpport);
+
+                        if (!NOACK) sendPacket(ack);
+                        if (NOACK) System.out.println("NO ack will be send, Sender will send again and again");
+                        if (DEBUGMODE) System.out.println("\nSend ack " + seq + " to " + ip + udpport);
 
                         if (isLast) {
                             receivedData = outputStream.toByteArray();
                             hm.setHistoryByteArray(receivedData);
+                            if (DEBUGMODE) System.out.println(receivedData.length);
+                            if (DEBUGMODE) System.out.println("Create byte array successfully");
                             System.out.println("Create byte array successfully");
                             stopflag = true;
                             rwl.writeLock().lock();
                             historyHandler.remove(ip.toString() + udpport);
                             rwl.writeLock().unlock();
-                            System.out.println("Remove user successfully");
+                            if (DEBUGMODE) System.out.println("Remove user successfully");
                         }
                         seq++;
                     }
@@ -198,15 +222,16 @@ public class HistorySender implements Runnable {
         localseq = seq;
         int i = 0;
         int k = 10;
-       // System.out.println("create packet from " + seq+ " rest no:"+ localpacketNo +" count: "+localcount +"will create packet NO: "+numofpacket);
+
+        //   if (DEBUGMODE)   System.out.println("create packet from " + seq + " rest no:" + localpacketNo + " count: " + localcount + "will create packet NO: " + numofpacket);
         while (i < numofpacket && localpacketNo > 0) {
             if (localseq > packetNoNoChange)  //for some cases: [1234] receive 3,but seq=5>total packet number 4,so do nothing
                 break;
 
-            if (localseq ==packetNoNoChange) {
+            if (localseq == packetNoNoChange) {
                 isLast = true;
                 k = lastPacketLen;
-               // System.out.println("k is " + k);
+                // if (DEBUGMODE) System.out.println("k is " + k);
 
             } else {
                 isLast = false;
@@ -218,17 +243,27 @@ public class HistorySender implements Runnable {
                 localcount++;
                 //System.out.println(j);
             }
-          //  System.out.println("Local Count for seq " + localseq + " is " + localcount);
+            //     if (DEBUGMODE) System.out.println("Local Count for seq " + localseq + " is " + localcount);
 
             Data singlePacket = Data.newBuilder().setType(packetType.DATA).setSeqNo(localseq).setData(ByteString.copyFrom(bytearrays)).setIsLast(isLast).build();
-            sendPacket(singlePacket);
-            System.out.println("\nSend packet " + localseq + " rest " + localpacketNo + " packets");
-            System.out.println(singlePacket.getIsLast());
+            if (NODATA) {
+                Random rand = new Random();
+                int n = rand.nextInt(10) + 1;
+                if (n > 5) {
+                    sendPacket(singlePacket);
+                    System.out.println("Send packet " + localseq);
+                } else
+                    System.out.println("Packet " + localseq + " has been dropped");
+            }
+            if (!NODATA) {
+                sendPacket(singlePacket);
+                if (DEBUGMODE) System.out.println("Send packet " + localseq);
+            }
             localseq++;
             localpacketNo--;
             i++;
         }
-       // System.out.println("\nSet countdown timer");
+        // System.out.println("\nSet countdown timer");
         countdowntimer = new CountDownLatch(1);
     }
 
