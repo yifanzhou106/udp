@@ -41,9 +41,14 @@ public class HistoryManager {
     }
 
     public History getHistoryPacket() {
-        History packet = History.newBuilder().addAllHistory(history).build();
-
-        return packet;
+        rwl.readLock().lock();
+        History.Builder packet = History.newBuilder();
+        for (int i=0;i<history.size();i++)
+        {
+            packet.addHistory(history.get(i));
+        }
+        rwl.readLock().unlock();
+        return packet.build();
     }
 
     public void setHistoryByteArray(byte[] historyByteArray) {
@@ -52,8 +57,12 @@ public class HistoryManager {
             rwl.writeLock().lock();
             ByteArrayInputStream instream = new ByteArrayInputStream(historyByteArray);
             History packet = History.parseDelimitedFrom(instream);
-        //    System.out.println(packet);
-           this.history= packet.getHistoryList();
+            //System.out.println(packet);
+            history = new ArrayList<>();
+            for (int i=0;i<packet.getHistoryCount();i++)
+                history.add(packet.getHistory(i));
+            //System.out.println(packet.getHistoryList());
+           //this.history= packet.getHistoryList();
           //  System.out.println(history);
             rwl.writeLock().unlock();
         }

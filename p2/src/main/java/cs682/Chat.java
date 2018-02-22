@@ -26,12 +26,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class Chat {
     public static String PORT = "8000";
-    public static String HOST = "127.0.0.1";
+   // public static String HOST = "mc10";
     public static String UDPPORT = "5700";
     static volatile boolean isShutdown = false;
 
-    public static final int ZpPORT = 7000;//2181
-    public static final String ZpHOST = "127.0.0.1";
+    public static final int ZpPORT = 2181;//2181
+    public static final String ZpHOST = "mc01";
 
     public static final String group = "/CS682_Chat";
     public static String member = "/yifanZhou1";
@@ -40,7 +40,7 @@ public class Chat {
     public static String format = "yyyy-MM-dd HH:mm:ss";
 
     final static ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    final ExecutorService threads = Executors.newFixedThreadPool(8);
+    final ExecutorService threads = Executors.newFixedThreadPool(10);
 
     static Map<String, ArrayList<String>> userMap = new HashMap();
     static Map<String, String> bcastHistoryMap = new TreeMap<>();
@@ -57,19 +57,19 @@ public class Chat {
      */
     public static void main(String[] args) throws Exception {
         Chat client = new Chat();
-//        for (int i = 0; i < args.length; i++) {
-//            System.out.println(args[i]);
-//        }
-//        if (args[0].equals("-user")) {
-//            user = args[1];
-//            member = "/" + user;
-//            //System.out.println(member);
-//        }
-//        if (args[2].equals("-port"))
-//            PORT = args[3];
-//
-//        if (args[4].equals("-udpport"))
-//            UDPPORT = args[5];
+        for (int i = 0; i < args.length; i++) {
+            System.out.println(args[i]);
+        }
+        if (args[0].equals("-user")) {
+            user = args[1];
+            member = "/" + user;
+            //System.out.println(member);
+        }
+        if (args[2].equals("-port"))
+            PORT = args[3];
+
+        if (args[4].equals("-udpport"))
+            UDPPORT = args[5];
 
 
         client.beginChat();

@@ -5,6 +5,8 @@ import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -63,15 +65,21 @@ public class ZooKeeperConnector {
      * @return
      */
     public void joinZooKeeper() {
-        ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp(HOST).setPort(PORT).setUdpport(UDPPORT).build();
         try {
+            ChatProto1.ZKData data = ChatProto1.ZKData.newBuilder().setIp(InetAddress.getLocalHost().toString().split("/")[1]).setPort(PORT).setUdpport(UDPPORT).build();
+
             String createdPath = zk.create(group + member,
                     data.toByteArray(),  //probably should be something more interesting here...
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
                     CreateMode.EPHEMERAL );//_SEQUENTIAL
             System.out.println("Joined group " + group + member);
 
-        } catch (KeeperException ke) {
+        }
+        catch (UnknownHostException e)
+        {
+            e.printStackTrace();
+        }
+        catch (KeeperException e) {
             System.out.println("Unable to or have already joined group " + group + " as " + member);
         } catch (InterruptedException e) {
             System.out.println(e);

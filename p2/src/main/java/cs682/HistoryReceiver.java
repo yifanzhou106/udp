@@ -14,12 +14,15 @@ import static cs682.Chat.*;
 
 import cs682.ChatProto1.*;
 import cs682.ChatProto1.Data.packetType;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 public class HistoryReceiver implements Runnable {
     private HashMap<String, HistorySender> historyHandler;
     public ExecutorService threads;
     private HistoryManager hm;
     static DatagramSocket socket;
+    protected static Logger log = LogManager.getLogger(HistoryReceiver.class);
 
     public HistoryReceiver(ExecutorService threads, HistoryManager hm) {
         this.threads = threads;
@@ -43,7 +46,7 @@ public class HistoryReceiver implements Runnable {
             byte[] requestPacketByteArray = outstream.toByteArray();
             DatagramPacket datagramPacket = new DatagramPacket(requestPacketByteArray, requestPacketByteArray.length, ip, port);
             socket.send(datagramPacket);
-            System.out.println("Sending a request packet\n");
+            log.info("Sending a request packet\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -64,25 +67,33 @@ public class HistoryReceiver implements Runnable {
                 packetType type = protoPkt.getType();
                 int udpPort = packet.getPort();
                 String udpIp = packet.getAddress().toString();
-
+                boolean isexist =historyHandler.containsKey(udpIp + udpPort);
                 if (type == packetType.REQUEST) {   //Handle REQUEST
-                    System.out.println("Receive a Request Packet.\n");
+                    log.info("Receive a Request Packet.\n");
+                    rwl.readLock().lock();
 
-                    if (!historyHandler.containsKey(udpIp + udpPort)) {
+                        rwl.readLock().unlock();
+                    if (!isexist) {
                         HistorySender hs = new HistorySender(packet, hm, historyHandler);
-                        System.out.println("Request Add into hashmap." + udpIp + udpPort);
+                        log.info("Request Add into hashmap." + udpIp + udpPort);
+                        rwl.writeLock().lock();
                         historyHandler.put(udpIp + udpPort, hs);
+                        rwl.writeLock().unlock();
                         threads.submit(hs);
                     } else {
-                        System.out.println("Your Services are running.\n ");
+                        log.info("Your Services are running.\n ");
                     }
                 } else {
-                    if (historyHandler.containsKey(udpIp + udpPort)) {  //Handle ACK and DATA
-                        threads.submit(new ReceivePacketHandler(historyHandler, packet));//Create threads to set packets
+                    if (isexist) {  //Handle ACK and DATA
+                        //threads.submit(new ReceivePacketHandler(historyHandler, packet));//Create threads to set packets
+                        HistorySender hs = historyHandler.get(udpIp + udpPort); //Get thread from hash map
+                       hs.setPacket(packet); //Pass packet into HistorySender
                     } else if (type == packetType.DATA) { //Create a new thread when receive a new DATA
                         HistorySender hs = new HistorySender(packet, hm, historyHandler);
-                        System.out.println("Data Add into hashmap." + udpIp + udpPort);
+                        log.info("Data Add into hashmap." + udpIp + udpPort);
+                        rwl.writeLock().lock();
                         historyHandler.put(udpIp + udpPort, hs);
+                        rwl.writeLock().unlock();
                         threads.submit(hs);
                     }
                 }
