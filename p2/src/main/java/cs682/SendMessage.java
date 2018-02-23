@@ -11,6 +11,11 @@ import static cs682.Chat.member;
 import static cs682.Chat.user;
 import static cs682.Chat.userMap;
 
+/**
+ * Get into sending message threads
+ * Will create a socket to send messages
+ * Broadcast or Private message
+ */
 public class SendMessage implements Runnable {
     private Socket connectionSocket = new Socket();
     private String name = null;
@@ -54,7 +59,6 @@ public class SendMessage implements Runnable {
                 System.out.println(replyMessage.getStatus() + " " + replyMessage.getMessage());
 
             } else {
-                //System.out.println("Broad cast\n");
                 for (Map.Entry<String, ArrayList<String>> map : userMap.entrySet()) {
                     String name = map.getKey();
                     ArrayList<String> userData = map.getValue();
@@ -64,8 +68,6 @@ public class SendMessage implements Runnable {
                             sport = userData.get(1);
                             InetAddress ip = InetAddress.getByName(sip);
                             int port = Integer.parseInt(sport);
-                            //Create connection
-                            //connectionSocket = new Socket(ip, port);
                             connectionSocket = new Socket();
                             connectionSocket.connect(new InetSocketAddress(ip, port), timeout);
                             ChatProto1.ChatProto sendMessage = ChatProto1.ChatProto.newBuilder().setMessage(message).setFrom(member).setIsBcast(isBcast).build();

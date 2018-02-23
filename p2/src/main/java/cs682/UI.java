@@ -1,24 +1,28 @@
 package cs682;
 
-import org.apache.zookeeper.ZooKeeper;
+import cs682.UdpHistory.HistoryManager;
+import cs682.UdpHistory.HistoryReceiver;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 
 import static cs682.Chat.*;
 
+/**
+ * Get into UI threads
+ * User will input choices
+ * Switch function will handle with user input
+ * If user want to send message, it will create a socket to send messages
+ * Last version:
+ * Update request into switch
+ */
 public class UI implements Runnable {
 
     public ExecutorService threads;
     public ZooKeeperConnector zkc;
-    private List<String> userData = new ArrayList();
+    private List<String> userData;
     private HistoryReceiver hr;
     private HistoryManager hm;
 
@@ -27,6 +31,7 @@ public class UI implements Runnable {
         this.zkc = zkc;
         this.hr = hr;
         this.hm = hm;
+        userData = new ArrayList();
     }
 
     @Override
@@ -34,7 +39,6 @@ public class UI implements Runnable {
         while (!isShutdown) {
             boolean ifPrint = false;
             zkc.listZooKeeperMember(ifPrint);
-
             Scanner reader = new Scanner(System.in);
             System.out.println("Enter your choices (Enter \"help\" for help): ");
             String userChoice = reader.nextLine();
@@ -88,29 +92,26 @@ public class UI implements Runnable {
                         userData = userMap.get(name);
                         String sip = userData.get(0);
                         String udpport = userData.get(2);
-                        if (udpport==null)
+                        if (udpport == null)
                             System.out.println("This person do not support UDP\n");
                         hr.sendRequest(sip, udpport);
                     } else {
                         System.out.println("This person not in the list\n");
                     }
                     break;
+
                 case "exit":
                     isShutdown = true;
                     threads.shutdownNow();
                     System.exit(0);
                     break;
 
-
                 default:
                     System.out.println("\nWrong Input\n");
                     break;
             }
         }
-
     }
-
-
 }
 
 

@@ -10,8 +10,14 @@ import java.util.Date;
 import java.util.concurrent.ExecutorService;
 
 import static cs682.Chat.*;
-import cs682.ChatProto1.*;
 
+import cs682.ChatProto1.*;
+import cs682.UdpHistory.HistoryManager;
+
+/**
+ * Get into receive message threads
+ * Will create a socket to receive messages
+ */
 public class ReceiveMessage implements Runnable {
 
     private ExecutorService threads;
@@ -26,8 +32,6 @@ public class ReceiveMessage implements Runnable {
 
     @Override
     public void run() {
-        // System.out.println("A client connected.");
-
         try {
             ServerSocket welcomingSocket = new ServerSocket(Integer.parseInt(PORT));
             while (!isShutdown) {
@@ -65,8 +69,6 @@ public class ReceiveMessage implements Runnable {
             System.out.println(e);
 
         }
-
     }
-
 }
 

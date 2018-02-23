@@ -9,21 +9,21 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static cs682.Chat.*;
 
+/**
+ * This class will handle with all zookeeper actions
+ * including
+ * create connection, join group, pull list from zookeeper
+ */
 
 public class ZooKeeperConnector {
     public ZooKeeper zk;
 
     public ZooKeeperConnector() {
         zk = connectZooKeeper();
-    }
-
-    public ZooKeeper getZk() {
-        return zk;
     }
 
     /**
@@ -57,7 +57,6 @@ public class ZooKeeperConnector {
         return zk;
     }
 
-
     /**
      * Join zookeeper
      * Codes from zp example
@@ -71,15 +70,12 @@ public class ZooKeeperConnector {
             String createdPath = zk.create(group + member,
                     data.toByteArray(),  //probably should be something more interesting here...
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.EPHEMERAL );//_SEQUENTIAL
+                    CreateMode.EPHEMERAL);//_SEQUENTIAL
             System.out.println("Joined group " + group + member);
 
-        }
-        catch (UnknownHostException e)
-        {
+        } catch (UnknownHostException e) {
             e.printStackTrace();
-        }
-        catch (KeeperException e) {
+        } catch (KeeperException e) {
             System.out.println("Unable to or have already joined group " + group + " as " + member);
         } catch (InterruptedException e) {
             System.out.println(e);
@@ -92,7 +88,7 @@ public class ZooKeeperConnector {
      *
      * @return
      */
-    public void listZooKeeperMember( boolean ifPrint) {
+    public void listZooKeeperMember(boolean ifPrint) {
         rwl.writeLock().lock();
 
         try {
@@ -114,10 +110,7 @@ public class ZooKeeperConnector {
                     userData.add(ip);
                     userData.add(port);
                     userData.add(udpport);
-                    //System.out.print("IP: " + ip + "\tPort: " + port);
                     userMap.put(child, userData);
-                    //System.out.print("\n");
-
                 } else {
                     System.out.println("\tNO DATA");
                 }
@@ -129,9 +122,6 @@ public class ZooKeeperConnector {
         } catch (InterruptedException e) {
             System.out.println(e);
         }
-
         rwl.writeLock().unlock();
     }
-
-
 }
